@@ -1118,6 +1118,11 @@
 
         submitButton.disabled =
           false;
+
+        tossNote.hidden = false;
+        tossNote.textContent = error.status === 401
+          ? '로그인한 뒤 숙박 일정을 선택하면 결제수단이 표시됩니다.'
+          : '결제수단을 표시하려면 유효한 숙박 일정과 인원을 확인해 주세요.';
       }
     }
   }
@@ -1430,6 +1435,13 @@
 
       totalPriceEl.textContent =
         '-';
+
+      if (!USE_MOCK_DATA) {
+        tossMethod.hidden = true;
+        tossAgreement.hidden = true;
+        tossNote.hidden = false;
+        tossNote.textContent = '로그인하고 체크인·체크아웃을 선택하면 결제수단이 표시됩니다.';
+      }
 
       updateMileage();
 
