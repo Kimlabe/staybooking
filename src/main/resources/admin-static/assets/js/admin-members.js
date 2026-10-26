@@ -58,6 +58,7 @@
         return wrap;
       } },
       { label: '이메일', render: function (m) { return m.email; } },
+      { label: '연락처', render: function (m) { return m.phone || '-'; } },
       { label: '역할', render: function (m) { return AdminUi.badge('role', m.role); } },
       { label: '상태', render: function (m) { return AdminUi.badge('userStatus', m.status); } },
       { label: '마일리지', render: function (m) { return Number(m.mileageBalance || 0).toLocaleString('ko-KR') + ' P'; } },
