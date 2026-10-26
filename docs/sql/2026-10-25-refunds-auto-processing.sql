@@ -1,4 +1,4 @@
--- DB01 refunds 테이블용 1회 수동 변경 SQL.
+-- DB01에 2026-10-26 적용한 refunds 테이블용 1회 수동 변경 SQL. 재실행 금지.
 -- 사전 확인(2026-10-25): status enum('APPROVED','REJECTED','REQUESTED'),
 -- started_at / failure_code / auto_processing 없음, refunds 0행.
 -- 백업과 현재 스키마 재확인 후에만 실행한다. MySQL DDL은 ROLLBACK으로 되돌릴 수 없다.

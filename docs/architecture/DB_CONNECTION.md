@@ -34,10 +34,11 @@ GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES
 
 ### 자동 환불 스키마 변경 준비
 
-2026-10-25 DB01에서 `refunds.status`는 `enum('APPROVED','REJECTED','REQUESTED')`였고, `started_at`, `failure_code`, `auto_processing`은 없었습니다. `refunds` 행은 0건이었습니다. 새 자동 환불 코드를 DB01에 배포하기 전에 [수동 변경 SQL](../sql/2026-10-25-refunds-auto-processing.sql)을 적용해야 합니다. 이 SQL은 저장소에 **준비만** 했으며 DB01에서는 아직 실행하지 않았습니다.
+2026-10-26 DB01의 전체 16개 테이블을 `/home/kisia/staybooking-backups/staybooking-pre-schema-2026-10-26.sql`에 백업한 뒤 [수동 변경 SQL](../sql/2026-10-25-refunds-auto-processing.sql)을 적용했습니다. `refunds` 행은 0건이었고, 변경 후 `status`는 `varchar(30)`, `started_at`·`failure_code`·`auto_processing`은 nullable 컬럼으로 확인했습니다. 기존 회원 4건과 예약 3건은 유지됐습니다.
 
-적용 직전에 `SHOW CREATE TABLE refunds;`와 `SELECT COUNT(*) FROM refunds;`로 상태를 다시 확인하고 DB를 백업합니다. 다른 팀원이 그사이에 스키마를 변경했다면 SQL을 그대로 실행하지 말고 변경 내용을 먼저 비교합니다. 적용 후 SQL 하단의 컬럼 조회 결과에서 `status`가 `varchar(30)`이고 새 컬럼 3개가 보여야 합니다. MySQL DDL은 트랜잭션 취소로 되돌릴 수 없으므로 백업 파일을 별도로 보관합니다.
-이 SQL은 `refunds` 테이블만 다룹니다. 전체 애플리케이션 배포 전에는 다른 테이블과 FK도 현재 Entity 기준으로 별도 검증해야 합니다.
+이 SQL은 DB01에 다시 실행하지 않습니다. 다른 DB에 적용할 때는 현재 스키마와 행 수를 재확인하고 먼저 백업합니다. MySQL DDL은 트랜잭션 취소로 되돌릴 수 없습니다. 전체 애플리케이션 배포 전에는 최신 WAR의 `ddl-auto=validate` 기동 검증이 별도로 필요합니다.
+
+같은 백업 뒤 [마일리지 이력 생성 SQL](../sql/2026-10-26-mileage-history.sql)도 DB01에 적용했습니다. 생성 후 사용자·예약 외래키와 두 조회 인덱스를 확인했으며, 전체 테이블 수는 17개입니다.
 
 ## WAS01 실행 설정
 
