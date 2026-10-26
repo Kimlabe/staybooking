@@ -42,6 +42,7 @@ dependencies {
 }
 
 tasks.named('test') {
+	systemProperty 'staybooking.demo-data.enabled', 'false'
 	useJUnitPlatform()
 }
 
