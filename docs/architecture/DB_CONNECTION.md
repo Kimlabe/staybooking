@@ -58,4 +58,6 @@ Tomcat 서비스에 WAR를 배포할 때는 **Tomcat systemd 서비스의 환경
 
 2026-10-26 최신 `ROOT.war`를 WAS01에 배포했습니다. 이전 배포본은 `/opt/tomcat11/backups/staybooking-20261026T115805Z`에 보관했습니다. 재기동 로그에서 JPA Repository 15개가 로드됐고, `/` 및 `/api/v1/accommodations`는 HTTP 200으로 확인했습니다. 배포 직후의 `curl` 연결 실패 메시지는 Tomcat 시작 중 재시도에서 발생했으며, 최종 스크립트 결과는 `Deployment healthy`였습니다. 관리자 호스트·고정 JWT 키·토스 키는 이 배포에서 설정하지 않았습니다.
 
+이후 WAS01의 별도 Tomcat 설정으로 `STAYBOOKING_ADMIN_HOST=admin.localhost`, `STAYBOOKING_DDL_AUTO=validate`, 재시작해도 유지되는 JWT 키를 적용했습니다. JWT 키 값은 저장소와 이 문서에 기록하지 않습니다. 재기동 후 공개 홈·숙소 API·관리자 숙소 화면·승인자 화면·관리자 JS가 HTTP 200, 일반 호스트의 관리자 API가 404, 관리자 호스트에서 로그인하지 않은 관리자 API가 401인 것을 확인했습니다. 토스 테스트 키는 아직 WAS01에 설정하지 않았습니다.
+
 로컬 자동 테스트는 별도 H2 설정을 사용합니다. 위 접속 값 없이도 `./gradlew test`가 실행됩니다.
