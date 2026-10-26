@@ -36,9 +36,11 @@ GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES
 
 2026-10-26 DB01의 전체 16개 테이블을 `/home/kisia/staybooking-backups/staybooking-pre-schema-2026-10-26.sql`에 백업한 뒤 [수동 변경 SQL](../sql/2026-10-25-refunds-auto-processing.sql)을 적용했습니다. `refunds` 행은 0건이었고, 변경 후 `status`는 `varchar(30)`, `started_at`·`failure_code`·`auto_processing`은 nullable 컬럼으로 확인했습니다. 기존 회원 4건과 예약 3건은 유지됐습니다.
 
-이 SQL은 DB01에 다시 실행하지 않습니다. 다른 DB에 적용할 때는 현재 스키마와 행 수를 재확인하고 먼저 백업합니다. MySQL DDL은 트랜잭션 취소로 되돌릴 수 없습니다. 전체 애플리케이션 배포 전에는 최신 WAR의 `ddl-auto=validate` 기동 검증이 별도로 필요합니다.
+이 SQL은 DB01에 다시 실행하지 않습니다. 다른 DB에 적용할 때는 현재 스키마와 행 수를 재확인하고 먼저 백업합니다. MySQL DDL은 트랜잭션 취소로 되돌릴 수 없습니다.
 
 같은 백업 뒤 [마일리지 이력 생성 SQL](../sql/2026-10-26-mileage-history.sql)도 DB01에 적용했습니다. 생성 후 사용자·예약 외래키와 두 조회 인덱스를 확인했으며, 전체 테이블 수는 17개입니다.
+
+최신 WAR의 `ddl-auto=validate` 검사에서 `accommodations.amenities`가 없어 기동이 중단됐습니다. 변경 직전 17개 테이블을 `/home/kisia/staybooking-backups/staybooking-pre-accommodation-details-2026-10-26.sql`에 별도로 백업하고 [숙소 상세 컬럼 SQL](../sql/2026-10-26-accommodation-details.sql)을 적용해 `amenities`와 `rules`를 nullable `TEXT`로 추가했습니다. 그 뒤 최신 WAR를 운영 Tomcat과 별도로 WAS01의 `127.0.0.1:18080`에서 `ddl-auto=validate`로 기동해 전체 엔티티 검증을 통과했습니다. 검증 프로세스는 종료했으며 운영 WAR는 교체하지 않았습니다.
 
 ## WAS01 실행 설정
 

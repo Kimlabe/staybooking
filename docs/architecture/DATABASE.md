@@ -153,7 +153,7 @@ erDiagram
 
 MySQL 프로필에서는 1분마다 `auto_processing = TRUE`인 건 중 1분 넘게 `REQUESTED`로 남은 건과 2분 넘게 `PROCESSING`에 머문 건을 최대 25건씩 복구합니다. `FAILED`는 자동 재시도하지 않으며 관리자가 원인을 확인한 뒤 재시도합니다.
 
-2026-10-26 DB01 백업 후 [수동 변경 SQL](../sql/2026-10-25-refunds-auto-processing.sql)을 적용했습니다. `status`의 `varchar(30)` 변환과 새 컬럼 3개를 확인했습니다. 변경 당시 `refunds`는 0행이었습니다. 최신 WAR의 DB01 `ddl-auto=validate` 기동 검증은 아직 수행하지 않았습니다.
+2026-10-26 DB01 백업 후 [수동 변경 SQL](../sql/2026-10-25-refunds-auto-processing.sql)을 적용했습니다. `status`의 `varchar(30)` 변환과 새 컬럼 3개를 확인했습니다. 변경 당시 `refunds`는 0행이었습니다. 이후 최신 WAR를 별도 임시 포트에서 DB01 `ddl-auto=validate`로 기동해 엔티티 검증을 통과했습니다.
 
 ### `mileage_history`
 
@@ -172,6 +172,8 @@ MySQL 프로필에서는 1분마다 `auto_processing = TRUE`인 건 중 1분 넘
 마일리지는 **결제가 확정될 때** 차감합니다. 예약의 `used_mileage`는 쓰겠다는 신청이며, 예약 생성 시점에는 잔액이 줄지 않습니다. 결제하지 않고 버려진 예약을 되돌리는 흐름이 아직 없어, 예약 생성 시 차감하면 만료된 예약이 잔액을 영영 붙잡기 때문입니다. 취소 시에는 실제 차감 기록을 기준으로 되돌립니다. 예약당 `USE`와 `REFUND`는 각각 한 번만 남기므로 같은 처리가 다시 들어와도 잔액은 한 번만 움직입니다. 숙박 이용 완료에 따른 자동 적립은 [이용 완료 규칙](SPRING_BOOT.md)이 정해지지 않아 아직 없고, 적립은 관리자 수동 조정으로만 생깁니다.
 
 2026-10-26 DB01 백업 후 [수동 생성 SQL](../sql/2026-10-26-mileage-history.sql)을 적용했습니다. 컬럼·기본키·사용자/예약 외래키·조회 인덱스를 확인했습니다.
+
+같은 날 최신 WAR 검증에서 누락을 발견한 `accommodations.amenities`와 `rules`도 별도 백업 후 [수동 변경 SQL](../sql/2026-10-26-accommodation-details.sql)로 nullable `TEXT` 컬럼을 추가했습니다.
 
 ## 리뷰·문의·파일
 
