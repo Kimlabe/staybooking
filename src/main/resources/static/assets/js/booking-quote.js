@@ -7,9 +7,8 @@
  * GET  /api/v1/accommodations/{id}   객실 정보
  * POST /api/v1/bookings/quote         서버 예상 금액 (로그인 시)
  * POST /api/v1/bookings               예약 생성
- * 예약이 만들어지면 토스 결제 화면(/payment/checkout.html)으로 이동한다.
- * 마일리지·결제수단 입력은 화면에만 반영된다. 서버 예약 API가 받지 않아
- * 실제 금액은 서버가 계산하고, 결제수단은 토스 결제창에서 다시 고른다.
+ * 실제 결제수단은 이 화면의 토스 주문서에서 선택한다.
+ * 예약과 토스 주문을 만든 뒤 선택한 수단의 결제를 요청한다.
  */
 
 (function () {
@@ -305,6 +304,20 @@
   var mileageBalance = 0;
   var paymentMethod = 'CARD';
   var easyPayProvider = null;
+
+  var tossSection = document.getElementById('toss-payment-section');
+  var tossNote = document.getElementById('toss-payment-note');
+  var tossMethod = document.getElementById('toss-payment-method');
+  var tossAgreement = document.getElementById('toss-payment-agreement');
+  var tossCapabilities = null;
+  var tossWidgets = null;
+  var tossWidgetsReady = null;
+  var tossAmountUpdate = Promise.resolve();
+
+  if (!USE_MOCK_DATA) {
+    document.getElementById('legacy-payment-section').hidden = true;
+    tossSection.hidden = false;
+  }
 
 
   var headerReady =
@@ -783,13 +796,29 @@
       /*
        * 실제 BOOK-01
        * POST /api/v1/bookings
-       * 금액·재고는 서버가 DB 값으로 다시 계산하므로 객실·일정·인원만 보낸다.
+       * 서버가 금액·재고·사용 마일리지를 다시 검증한다.
        */
       setSubmitting(
         true
       );
 
+      var createdBookingId = null;
+
       try {
+
+        var quote = await BookingApi.quoteBooking({
+          roomId: requestBody.roomId,
+          checkIn: requestBody.checkIn,
+          checkOut: requestBody.checkOut,
+          guests: requestBody.guests,
+          usedMileage: requestBody.usedMileage
+        });
+        if (!quote.available) {
+          throw new Error('선택한 날짜에 남은 객실이 없습니다.');
+        }
+        if (quote.payAmount > 0) {
+          await ensureTossWidgets(quote.payAmount);
+        }
 
         var booking =
           await BookingApi.createBooking({
@@ -800,46 +829,42 @@
             checkOut:
               requestBody.checkOut,
             guests:
-              requestBody.guests
+              requestBody.guests,
+            usedMileage:
+              requestBody.usedMileage
           });
 
-
-        // 결제를 쓸 수 없으면 내 예약으로 보낸다 (예약은 이미 만들어졌다)
-        var destination =
-          '/booking/my.html?created=' +
-          encodeURIComponent(
-            booking.bookingId
-          );
-
-        try {
-
-          var capabilities =
-            await BookingApi.getPaymentCapabilities();
-
-          if (
-            capabilities.tossEnabled &&
-            capabilities.tossClientKey &&
-            booking.status === 'PAYMENT_PENDING'
-          ) {
-
-            destination =
-              '/payment/checkout.html?bookingId=' +
-              encodeURIComponent(
-                booking.bookingId
-              );
-          }
-
-        } catch (capabilityError) {
-          // 결제 설정 조회 실패로 예약을 다시 만들지 않도록 내 예약으로 이동한다.
+        createdBookingId = booking.bookingId;
+        if (booking.status !== 'PAYMENT_PENDING') {
+          throw new Error('예약의 결제 상태를 확인하지 못했습니다.');
         }
 
+        if (booking.totalAmount - booking.usedMileage === 0) {
+          await BookingApi.completeFreePayment(booking.bookingId);
+          window.location.replace('/booking/my.html?created=' +
+            encodeURIComponent(booking.bookingId));
+          return;
+        }
 
-        // 뒤로 가기로 예약 화면에 돌아와 같은 예약을 또 만들지 않도록 replace
-        window.location.replace(
-          destination
-        );
+        var payment = await BookingApi.preparePayment(booking.bookingId, 'TOSS');
+        var widgets = await ensureTossWidgets(payment.amount);
+        try {
+          sessionStorage.setItem('staybookingPendingTossOrder', payment.orderId);
+        } catch (storageError) { /* 성공 URL의 주문번호로도 결제를 확인할 수 있다. */ }
+
+        await widgets.requestPayment({
+          orderId: payment.orderId,
+          orderName: (booking.accommodationName + ' ' + booking.roomName).slice(0, 100),
+          successUrl: window.location.origin + '/payment/success.html',
+          failUrl: window.location.origin + '/payment/fail.html'
+        });
 
       } catch (error) {
+
+        if (createdBookingId !== null) {
+          window.location.replace('/booking/my.html?paymentError=1');
+          return;
+        }
 
         if (
           error.status === 401
@@ -973,6 +998,34 @@
    */
   var quoteSeq = 0;
 
+  async function ensureTossWidgets(amount) {
+    if (!tossWidgetsReady) {
+      tossWidgetsReady = (async function () {
+        tossCapabilities = await BookingApi.getPaymentCapabilities();
+        if (!tossCapabilities.tossEnabled || !tossCapabilities.tossClientKey) {
+          throw new Error('토스 테스트 결제가 설정되지 않았습니다. 결제 키를 설정한 뒤 다시 시도해 주세요.');
+        }
+        if (typeof TossPayments !== 'function') {
+          throw new Error('토스 결제 화면을 불러오지 못했습니다.');
+        }
+        tossWidgets = TossPayments(tossCapabilities.tossClientKey).widgets({
+          customerKey: 'STAY-' + crypto.randomUUID()
+        });
+        await tossWidgets.setAmount({ currency: 'KRW', value: amount });
+        await Promise.all([
+          tossWidgets.renderPaymentMethods({ selector: '#toss-payment-method' }),
+          tossWidgets.renderAgreement({ selector: '#toss-payment-agreement' })
+        ]);
+      })();
+    }
+    await tossWidgetsReady;
+    tossAmountUpdate = tossAmountUpdate.then(function () {
+      return tossWidgets.setAmount({ currency: 'KRW', value: amount });
+    });
+    await tossAmountUpdate;
+    return tossWidgets;
+  }
+
   async function refreshQuote() {
 
     var seq =
@@ -1002,7 +1055,9 @@
           checkOut:
             checkOut.value,
           guests:
-            guestValue
+            guestValue,
+          usedMileage:
+            getUsedMileage()
         });
 
       // 그사이 날짜·인원을 바꿨으면 늦게 온 응답은 버린다
@@ -1020,12 +1075,27 @@
 
       finalPriceEl.textContent =
         formatPrice(
-          Math.max(
-            quote.totalAmount - getUsedMileage(),
-            0
-          )
+          quote.payAmount
         ) +
         '원';
+
+      if (quote.payAmount > 0) {
+        tossMethod.hidden = false;
+        tossAgreement.hidden = false;
+        tossNote.hidden = false;
+        tossNote.textContent = '결제수단을 불러오는 중입니다.';
+        try {
+          await ensureTossWidgets(quote.payAmount);
+          if (seq === quoteSeq) tossNote.hidden = true;
+        } catch (paymentError) {
+          if (seq === quoteSeq) tossNote.textContent = paymentError.message;
+        }
+      } else {
+        tossMethod.hidden = true;
+        tossAgreement.hidden = true;
+        tossNote.hidden = false;
+        tossNote.textContent = '마일리지로 전액 결제되어 추가 결제수단이 필요하지 않습니다.';
+      }
 
       submitButton.disabled =
         !quote.available;
@@ -1519,6 +1589,11 @@
     var mileageOnly =
       getFinalAmount() === 0;
 
+    if (!USE_MOCK_DATA) {
+      submitButton.textContent = mileageOnly ? '예약 요청' : '예약 요청 및 결제';
+      return;
+    }
+
     cardPanel.hidden =
       mileageOnly ||
       paymentMethod !== 'CARD';
@@ -1935,7 +2010,7 @@
     submitButton.textContent =
       submitting
         ? '예약 처리 중...'
-        : '예약 요청';
+        : (!USE_MOCK_DATA && getFinalAmount() !== 0 ? '예약 요청 및 결제' : '예약 요청');
   }
 
 })();

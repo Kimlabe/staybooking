@@ -321,7 +321,7 @@
 
       <!-- 결제수단 -->
 
-      <section class="booking-card">
+      <section class="booking-card" id="legacy-payment-section">
 
         <h2>
           결제수단
@@ -485,6 +485,13 @@
 
       </section>
 
+      <section class="booking-card" id="toss-payment-section" hidden>
+        <h2>결제수단</h2>
+        <p id="toss-payment-note" class="booking-field-help">결제수단을 불러오는 중입니다.</p>
+        <div id="toss-payment-method"></div>
+        <div id="toss-payment-agreement"></div>
+      </section>
+
 
     </section>
 
@@ -605,6 +612,8 @@
 <script src="/assets/js/api.js"></script>
 
 <script src="/assets/js/common.js"></script>
+
+<script src="https://js.tosspayments.com/v2/standard"></script>
 
 <script src="/assets/js/booking-quote.js"></script>
 
