@@ -1,5 +1,5 @@
--- DB01에 아직 적용하지 않은 숙소 이미지 연결 테이블.
--- 적용 전 DB 백업과 현재 테이블 존재 여부를 확인한다.
+-- 숙소 이미지 연결 테이블. DB01에는 2026-10-26 적용했다.
+-- 다른 DB에 적용 전 백업과 현재 테이블 존재 여부를 확인한다.
 CREATE TABLE accommodation_files (
     accommodation_id BIGINT NOT NULL,
     file_id BIGINT NOT NULL,
