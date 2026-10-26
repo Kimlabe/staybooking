@@ -46,4 +46,4 @@ bookings.approved_by → 승인한 사람을 가리키는 FK (users.user_id 참�
 
 ## 현재 프로젝트와의 관계
 
-이 문서는 **목표 설계**입니다. 2026-10-26 DB01의 `staybooking` DB를 백업하고 `refunds` 타입·컬럼 변경, `mileage_history` 생성, `accommodations` 상세 컬럼 추가를 적용했습니다. 새 DB를 다시 생성하지 않습니다. 최신 WAR는 운영 Tomcat과 분리된 임시 포트에서 DB01 `ddl-auto=validate` 기동 검증을 통과했으며 운영 WAR는 교체하지 않았습니다. `spring.jpa.hibernate.ddl-auto=update`에 기존 컬럼 타입 변경을 맡기지 않습니다. Flyway는 현재 사용하지 않습니다.
+이 문서는 **목표 설계**입니다. 2026-10-26 DB01의 `staybooking` DB를 백업하고 `refunds` 타입·컬럼 변경, `mileage_history` 생성, `accommodations` 상세 컬럼 추가를 적용했습니다. 새 DB를 다시 생성하지 않습니다. 최신 WAR는 DB01 `ddl-auto=validate` 검증 후 WAS01의 `ROOT.war`로 배포했고, 기존 파일을 보관했습니다. `spring.jpa.hibernate.ddl-auto=update`에 기존 컬럼 타입 변경을 맡기지 않습니다. Flyway는 현재 사용하지 않습니다.

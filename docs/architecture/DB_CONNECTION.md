@@ -40,7 +40,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES
 
 같은 백업 뒤 [마일리지 이력 생성 SQL](../sql/2026-10-26-mileage-history.sql)도 DB01에 적용했습니다. 생성 후 사용자·예약 외래키와 두 조회 인덱스를 확인했으며, 전체 테이블 수는 17개입니다.
 
-최신 WAR의 `ddl-auto=validate` 검사에서 `accommodations.amenities`가 없어 기동이 중단됐습니다. 변경 직전 17개 테이블을 `/home/kisia/staybooking-backups/staybooking-pre-accommodation-details-2026-10-26.sql`에 별도로 백업하고 [숙소 상세 컬럼 SQL](../sql/2026-10-26-accommodation-details.sql)을 적용해 `amenities`와 `rules`를 nullable `TEXT`로 추가했습니다. 그 뒤 최신 WAR를 운영 Tomcat과 별도로 WAS01의 `127.0.0.1:18080`에서 `ddl-auto=validate`로 기동해 전체 엔티티 검증을 통과했습니다. 검증 프로세스는 종료했으며 운영 WAR는 교체하지 않았습니다.
+최신 WAR의 `ddl-auto=validate` 검사에서 `accommodations.amenities`가 없어 기동이 중단됐습니다. 변경 직전 17개 테이블을 `/home/kisia/staybooking-backups/staybooking-pre-accommodation-details-2026-10-26.sql`에 별도로 백업하고 [숙소 상세 컬럼 SQL](../sql/2026-10-26-accommodation-details.sql)을 적용해 `amenities`와 `rules`를 nullable `TEXT`로 추가했습니다. 그 뒤 최신 WAR를 운영 Tomcat과 별도로 WAS01의 `127.0.0.1:18080`에서 `ddl-auto=validate`로 기동해 전체 엔티티 검증을 통과했습니다. 검증 프로세스는 종료했습니다.
 
 ## WAS01 실행 설정
 
@@ -55,5 +55,7 @@ STAYBOOKING_DDL_AUTO=update
 ```
 
 Tomcat 서비스에 WAR를 배포할 때는 **Tomcat systemd 서비스의 환경변수**로 주입해야 합니다. Mac IDE에만 입력하면 WAS01 프로세스에는 전달되지 않습니다. 설정 후 WAS01에서 애플리케이션 로그의 DB 연결 성공 여부와 DB01의 `SHOW TABLES FROM staybooking;` 결과를 함께 확인합니다. `users`, `accommodations`, `rooms`, `bookings`, `payments`, `booking_cancellation_requests`가 생성 대상입니다.
+
+2026-10-26 최신 `ROOT.war`를 WAS01에 배포했습니다. 이전 배포본은 `/opt/tomcat11/backups/staybooking-20261026T115805Z`에 보관했습니다. 재기동 로그에서 JPA Repository 15개가 로드됐고, `/` 및 `/api/v1/accommodations`는 HTTP 200으로 확인했습니다. 배포 직후의 `curl` 연결 실패 메시지는 Tomcat 시작 중 재시도에서 발생했으며, 최종 스크립트 결과는 `Deployment healthy`였습니다. 관리자 호스트·고정 JWT 키·토스 키는 이 배포에서 설정하지 않았습니다.
 
 로컬 자동 테스트는 별도 H2 설정을 사용합니다. 위 접속 값 없이도 `./gradlew test`가 실행됩니다.
