@@ -11,6 +11,14 @@
     .payment-summary p { margin: 8px 0; }
     #payment-button { width: 100%; padding: 15px; border: 0; border-radius: 9px; cursor: pointer; }
     #payment-button:disabled { cursor: not-allowed; opacity: .6; }
+    .saved-card { padding: 16px 20px; border: 1px solid #ddd; border-radius: 12px; margin: 0 0 16px; }
+    .saved-card label { display: block; margin: 10px 0 6px; font-size: 14px; }
+    .saved-card input { width: 100%; height: 42px; padding: 0 12px; border: 1px solid #ccc; border-radius: 8px; font: inherit; }
+    .saved-card button { width: 100%; margin-top: 12px; padding: 13px; border: 0; border-radius: 9px; cursor: pointer; }
+    .saved-card .saved-card-links { display: flex; gap: 16px; margin: 8px 0 0; }
+    .easy-pay-buttons { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .easy-pay-buttons button { margin-top: 12px; }
+    .saved-card .saved-card-links button { width: auto; margin: 0; padding: 4px 0; background: none; text-decoration: underline; }
   </style>
 </head>
 <body data-payment-page="checkout">
@@ -22,14 +30,40 @@
     <p id="payment-dates"></p>
     <strong id="payment-amount"></strong>
   </div>
+  <!-- 등록 카드 결제 (PAYMENT_005). 카드가 등록돼 있고 개별 연동 키일 때만 보인다. -->
+  <form id="saved-card" class="saved-card" hidden novalidate>
+    <strong id="saved-card-label"></strong>
+    <label for="saved-card-password">계정 비밀번호 확인</label>
+    <input id="saved-card-password" type="password" maxlength="100" autocomplete="current-password" required>
+    <button id="saved-card-button" type="submit">등록 카드로 결제</button>
+    <p class="saved-card-links">
+      <button id="saved-card-change" class="btn-link" type="button">다른 카드로 변경</button>
+      <button id="saved-card-delete" class="btn-link" type="button">카드 삭제</button>
+    </p>
+  </form>
+  <!-- 카드 등록 (PAYMENT_004). 등록이 끝나면 이 결제 페이지로 돌아온다. -->
+  <div id="card-register" class="saved-card" hidden>
+    <strong>카드를 등록하고 결제하기</strong>
+    <p class="card-sub">한 번 등록하면 다음부터 계정 비밀번호만으로 결제할 수 있습니다. 카드 정보는 토스페이먼츠 창에만 입력되고 스테이북에는 저장되지 않습니다.</p>
+    <button id="card-register-button" type="button">카드 등록</button>
+  </div>
+  <!-- 간편결제: 누르면 토스 결제창이 해당 간편결제로 바로 열린다 (결제창 방식일 때만) -->
+  <div id="easy-pay" class="saved-card" hidden>
+    <strong>간편결제</strong>
+    <div class="easy-pay-buttons">
+      <button type="button" data-easy-pay="KAKAOPAY">카카오페이</button>
+      <button type="button" data-easy-pay="TOSSPAY">토스페이</button>
+    </div>
+  </div>
   <div id="payment-method"></div>
   <div id="payment-agreement"></div>
-  <button id="payment-button" type="button" disabled>결제하기</button>
+  <button id="payment-button" type="button" disabled>카드로 결제하기</button>
   <p><a href="/booking/my.html">내 예약으로 돌아가기</a></p>
 </main>
 <script src="/assets/js/api.js"></script>
 <script src="/assets/js/common.js"></script>
 <script src="https://js.tosspayments.com/v2/standard"></script>
+<script src="/assets/js/billing-card.js"></script>
 <script src="/assets/js/toss-payment.js"></script>
 </body>
 </html>

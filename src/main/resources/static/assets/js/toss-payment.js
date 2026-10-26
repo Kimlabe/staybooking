@@ -107,6 +107,8 @@
             amount: { currency: 'KRW', value: payment.amount }
           }, request));
         };
+        showEasyPay(paymentWindow, request, payment.amount);
+        if (capabilities.billingEnabled) await showBillingOptions(capabilities.tossClientKey, payment.amount);
       } else {
         var widgets = tossPayments.widgets({ customerKey: payment.orderId });
         await widgets.setAmount({ currency: 'KRW', value: payment.amount });
@@ -135,5 +137,102 @@
       Ui.showAlert(alertBox, e.message, 'error');
     }
   }
+  // 간편결제 버튼: 토스 결제창을 해당 간편결제로 바로 연다 (card.flowMode=DIRECT).
+  // 어떤 간편결제를 골라도 금액·주문번호는 서버 값이고, 승인은 결제 완료 페이지에서 서버가 다시 검증한다.
+  // 네이버페이는 테스트 서버가 계약 가맹점 전용 계정을 요구해 뺐다.
+  var EASY_PAY = ['KAKAOPAY', 'TOSSPAY'];
+  function showEasyPay(paymentWindow, request, amount) {
+    var box = document.getElementById('easy-pay');
+    box.hidden = false;
+    box.querySelectorAll('[data-easy-pay]').forEach(function (easyButton) {
+      easyButton.addEventListener('click', async function () {
+        var provider = easyButton.dataset.easyPay;
+        if (EASY_PAY.indexOf(provider) === -1) return;
+        Ui.hideAlert(alertBox);
+        easyButton.disabled = true;
+        try {
+          await paymentWindow.requestPayment(Object.assign({
+            method: 'CARD',
+            amount: { currency: 'KRW', value: amount },
+            card: { flowMode: 'DIRECT', easyPay: provider }
+          }, request));
+        } catch (e) {
+          if (e.code !== 'USER_CANCEL') {
+            Ui.showAlert(alertBox, e.message || '간편결제를 시작하지 못했습니다. 다른 결제 방법을 이용해 주세요.', 'error');
+          }
+        } finally {
+          easyButton.disabled = false;
+        }
+      });
+    });
+  }
+
+  // 등록 카드(PAYMENT_005)가 있으면 비밀번호만 다시 입력해 바로 결제한다. 금액·주문번호는 서버가 정한다.
+  // 없으면 카드 등록(PAYMENT_004)을 안내하고, 등록이 끝나면 이 페이지로 돌아온다.
+  async function showBillingOptions(clientKey, amount) {
+    var cards = await BookingApi.getBillingCards().catch(function () { return []; });
+    var form = document.getElementById('saved-card');
+    var register = document.getElementById('card-register');
+    var openRegister = async function (trigger) {
+      Ui.hideAlert(alertBox);
+      trigger.disabled = true;
+      try {
+        await BillingCard.openRegister(clientKey, bookingId);
+      } catch (e) {
+        // 사용자가 창을 닫으면 USER_CANCEL이 온다
+        if (e.code !== 'USER_CANCEL') Ui.showAlert(alertBox, e.message || '카드 등록 창을 열지 못했습니다.', 'error');
+      } finally {
+        trigger.disabled = false;
+      }
+    };
+
+    if (!cards.length) {
+      register.hidden = false;
+      var registerButton = document.getElementById('card-register-button');
+      registerButton.addEventListener('click', function () { openRegister(registerButton); });
+      return;
+    }
+
+    var card = cards[0];
+    var password = document.getElementById('saved-card-password');
+    var submit = document.getElementById('saved-card-button');
+    document.getElementById('saved-card-label').textContent = '등록 카드: ' + BillingCard.label(card);
+    submit.textContent = '등록 카드로 ' + Number(amount).toLocaleString('ko-KR') + '원 결제';
+    form.hidden = false;
+
+    var change = document.getElementById('saved-card-change');
+    change.addEventListener('click', function () { openRegister(change); });
+    document.getElementById('saved-card-delete').addEventListener('click', async function () {
+      if (!window.confirm('등록된 카드를 삭제할까요?')) return;
+      try {
+        await BookingApi.deleteBillingCard(card.billingCardId);
+        window.location.reload();
+      } catch (e) {
+        Ui.showAlert(alertBox, e.message, 'error');
+      }
+    });
+
+    form.addEventListener('submit', async function (event) {
+      event.preventDefault();
+      Ui.hideAlert(alertBox);
+      if (!password.value) {
+        Ui.showAlert(alertBox, '계정 비밀번호를 입력해 주세요.', 'error');
+        return;
+      }
+      submit.disabled = true;
+      button.disabled = true;
+      try {
+        await BookingApi.payWithBillingCard(card.billingCardId, bookingId, password.value);
+        window.location.replace('/booking/my.html');
+      } catch (e) {
+        Ui.showAlert(alertBox, e.message, 'error');
+        submit.disabled = false;
+        button.disabled = false;
+      } finally {
+        password.value = '';
+      }
+    });
+  }
+
   init();
 })();
