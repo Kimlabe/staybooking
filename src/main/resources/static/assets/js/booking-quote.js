@@ -7,8 +7,8 @@
  * GET  /api/v1/accommodations/{id}   객실 정보
  * POST /api/v1/bookings/quote         서버 예상 금액 (로그인 시)
  * POST /api/v1/bookings               예약 생성
- * 실제 결제수단은 이 화면의 토스 주문서에서 선택한다.
- * 예약과 토스 주문을 만든 뒤 선택한 수단의 결제를 요청한다.
+ * 예약 화면의 토스 주문서에서 결제수단을 고르고, 예약 생성 후 결제를 요청한다.
+ * 사용 마일리지와 결제 금액은 서버가 다시 검증한다.
  */
 
 (function () {
@@ -309,7 +309,6 @@
   var tossNote = document.getElementById('toss-payment-note');
   var tossMethod = document.getElementById('toss-payment-method');
   var tossAgreement = document.getElementById('toss-payment-agreement');
-  var tossCapabilities = null;
   var tossWidgets = null;
   var tossWidgetsReady = null;
   var tossAmountUpdate = Promise.resolve();
@@ -796,7 +795,7 @@
       /*
        * 실제 BOOK-01
        * POST /api/v1/bookings
-       * 서버가 금액·재고·사용 마일리지를 다시 검증한다.
+       * 금액·재고·사용 마일리지는 서버가 DB 값으로 다시 검증한다.
        */
       setSubmitting(
         true
@@ -806,6 +805,8 @@
 
       try {
 
+        // 예약을 만들기 전에 서버 견적과 결제 가능 상태를 확인한다.
+        // 결제 서비스가 꺼져 있을 때 결제 불가능한 예약을 먼저 만들지 않는다.
         var quote = await BookingApi.quoteBooking({
           roomId: requestBody.roomId,
           checkIn: requestBody.checkIn,
@@ -1001,14 +1002,14 @@
   async function ensureTossWidgets(amount) {
     if (!tossWidgetsReady) {
       tossWidgetsReady = (async function () {
-        tossCapabilities = await BookingApi.getPaymentCapabilities();
-        if (!tossCapabilities.tossEnabled || !tossCapabilities.tossClientKey) {
-          throw new Error('토스 테스트 결제가 설정되지 않았습니다. 결제 키를 설정한 뒤 다시 시도해 주세요.');
+        var capabilities = await BookingApi.getPaymentCapabilities();
+        if (!capabilities.tossEnabled || !capabilities.tossClientKey) {
+          throw new Error('토스 테스트 결제가 설정되지 않았습니다. 결제 키를 확인해 주세요.');
         }
         if (typeof TossPayments !== 'function') {
           throw new Error('토스 결제 화면을 불러오지 못했습니다.');
         }
-        tossWidgets = TossPayments(tossCapabilities.tossClientKey).widgets({
+        tossWidgets = TossPayments(capabilities.tossClientKey).widgets({
           customerKey: 'STAY-' + crypto.randomUUID()
         });
         await tossWidgets.setAmount({ currency: 'KRW', value: amount });
@@ -1016,7 +1017,10 @@
           tossWidgets.renderPaymentMethods({ selector: '#toss-payment-method' }),
           tossWidgets.renderAgreement({ selector: '#toss-payment-agreement' })
         ]);
-      })();
+      })().catch(function (error) {
+        tossWidgetsReady = null;
+        throw error;
+      });
     }
     await tossWidgetsReady;
     tossAmountUpdate = tossAmountUpdate.then(function () {
@@ -1118,7 +1122,6 @@
 
         submitButton.disabled =
           false;
-
         tossNote.hidden = false;
         tossNote.textContent = error.status === 401
           ? '로그인한 뒤 숙박 일정을 선택하면 결제수단이 표시됩니다.'
