@@ -241,6 +241,10 @@
       return authed('POST', '/api/v1/payments/demo-complete', { bookingId: bookingId });
     },
 
+    completeFreePayment: function (bookingId) {
+      return authed('POST', '/api/v1/payments/free-complete', { bookingId: bookingId });
+    },
+
     preparePayment: function (bookingId, paymentMethod) {
       return authed('POST', '/api/v1/payments/prepare', {
         bookingId: bookingId, paymentMethod: paymentMethod

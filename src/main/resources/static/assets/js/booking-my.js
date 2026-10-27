@@ -6,7 +6,6 @@
   var alertBox = document.getElementById('my-booking-alert');
   var tabs = document.querySelectorAll('.my-booking-tab');
   var bookings = [];
-  var demoPaymentEnabled = false;
   var tossPaymentEnabled = false;
   var selected = 'ALL';
   var statusLabels = {
@@ -106,14 +105,16 @@
       var cancel = document.createElement('button');
       cancel.type = 'button';
       cancel.className = 'my-booking-cancel-button';
-      if (booking.status === 'PAYMENT_PENDING' && tossPaymentEnabled && !paymentExpired(booking)) {
+      if (booking.status === 'PAYMENT_PENDING'
+          && Number(booking.totalAmount) - Number(booking.usedMileage) === 0
+          && !paymentExpired(booking)) {
+        cancel.textContent = '마일리지 결제 완료';
+        cancel.addEventListener('click', function () { completeFreePayment(booking, cancel); });
+      } else if (booking.status === 'PAYMENT_PENDING' && tossPaymentEnabled && !paymentExpired(booking)) {
         cancel.textContent = '결제하기';
         cancel.addEventListener('click', function () {
           window.location.href = '/payment/checkout.html?bookingId=' + encodeURIComponent(booking.bookingId);
         });
-      } else if (booking.status === 'PAYMENT_PENDING' && demoPaymentEnabled && !paymentExpired(booking)) {
-        cancel.textContent = '테스트 결제 (실제 청구 없음)';
-        cancel.addEventListener('click', function () { completeDemoPayment(booking, cancel); });
       } else if (booking.status === 'PENDING' || booking.status === 'COMPLETED') {
         cancel.textContent = booking.cancellationRequested ? '취소 신청 접수' : '취소 신청';
         cancel.disabled = !!booking.cancellationRequested;
@@ -131,14 +132,13 @@
     });
   }
 
-  async function completeDemoPayment(booking, button) {
-    if (!window.confirm('개발용 테스트 결제입니다. 실제 결제나 청구는 발생하지 않습니다. 진행할까요?')) return;
+  async function completeFreePayment(booking, button) {
     button.disabled = true;
     try {
-      await BookingApi.completeDemoPayment(booking.bookingId);
+      await BookingApi.completeFreePayment(booking.bookingId);
       booking.status = 'PENDING';
       render();
-      Ui.showAlert(alertBox, '테스트 결제가 완료되어 예약이 승인 대기 상태로 변경되었습니다.', 'success');
+      Ui.showAlert(alertBox, '마일리지 결제가 완료되어 예약이 승인 대기 상태로 변경되었습니다.', 'success');
     } catch (e) {
       button.disabled = false;
       Ui.showAlert(alertBox, e.message, 'error');
@@ -182,11 +182,14 @@
     try {
       var results = await Promise.all([BookingApi.getMyBookings(), BookingApi.getPaymentCapabilities()]);
       bookings = results[0];
-      demoPaymentEnabled = results[1].demoEnabled === true;
       tossPaymentEnabled = results[1].tossEnabled === true;
       render();
-      if (new URLSearchParams(window.location.search).has('created')) {
-        Ui.showAlert(alertBox, '예약이 접수되었습니다. 결제 후 승인 대기 상태로 넘어갑니다.', 'success');
+      var params = new URLSearchParams(window.location.search);
+      if (params.has('paymentError')) {
+        Ui.showAlert(alertBox, '예약은 생성됐지만 결제창을 열지 못했습니다. 결제하기에서 다시 시도해 주세요.', 'error');
+        window.history.replaceState(null, '', window.location.pathname);
+      } else if (params.has('created')) {
+        Ui.showAlert(alertBox, '마일리지 결제가 완료되어 예약이 승인 대기 상태가 됐습니다.', 'success');
         window.history.replaceState(null, '', window.location.pathname);
       }
     } catch (e) {

@@ -93,7 +93,10 @@ public class AccommodationService {
             .map(room -> {
                 int remaining = inventory.remainingUnits(room, stay.checkIn(), stay.checkOut(), nowUtc);
                 return new AccommodationDetail.RoomSummary(room.getRoomId(), room.getName(),
-                    room.getDescription(), mainImage(room.getImages()), room.getPrice(), room.getCapacity(), remaining,
+                    room.getDescription(), room.getImages().isEmpty()
+                        ? DemoAccommodationImages.roomImageUrl(room, accommodation)
+                        : UploadResponse.urlOf(room.getImages().get(0).getFileId()),
+                    room.getPrice(), room.getCapacity(), remaining,
                     remaining > 0 ? "AVAILABLE" : "SOLD_OUT");
             })
             .toList();
@@ -101,7 +104,9 @@ public class AccommodationService {
             accommodation.getAddress(), accommodation.getDescription(), accommodation.getCheckInTime(),
             accommodation.getCheckOutTime(), accommodation.getLatitude(), accommodation.getLongitude(),
             accommodation.getStatus(), accommodation.getAmenities(), accommodation.getRules(),
-            accommodation.getImages().stream().map(file -> UploadResponse.urlOf(file.getFileId())).toList(),
+            accommodation.getImages().isEmpty() && DemoAccommodationImages.imageUrl(accommodation) != null
+                ? List.of(DemoAccommodationImages.imageUrl(accommodation))
+                : accommodation.getImages().stream().map(file -> UploadResponse.urlOf(file.getFileId())).toList(),
             roomSummaries);
     }
 
@@ -124,16 +129,17 @@ public class AccommodationService {
                     .filter(room -> stay == null || bookable(room, guests, stay, nowUtc))
                     .findFirst()
                     .map(cheapest -> new AccommodationSummary(a.getAccommodationId(), a.getName(),
-                        a.getAddress(), a.getDescription(), mainImage(a.getImages()), cheapest.getPrice()))
+                        a.getAddress(), a.getDescription(), mainImage(a.getImages(), a), cheapest.getPrice()))
                     .orElse(null);
             })
             .filter(summary -> summary != null)
             .toList();
     }
 
-    // 첫 장이 대표 사진이다. 사진이 없으면 화면이 "이미지 준비 중"을 보여 준다.
-    private static String mainImage(List<FileEntity> images) {
-        return images.isEmpty() ? null : UploadResponse.urlOf(images.get(0).getFileId());
+    // 실제 업로드 사진을 우선하고, 개발용 숙소만 내장 대표 사진을 사용한다.
+    private static String mainImage(List<FileEntity> images, AccommodationEntity accommodation) {
+        return images.isEmpty() ? DemoAccommodationImages.imageUrl(accommodation)
+            : UploadResponse.urlOf(images.get(0).getFileId());
     }
 
     private boolean bookable(RoomEntity room, int guests, Stay stay, LocalDateTime nowUtc) {
