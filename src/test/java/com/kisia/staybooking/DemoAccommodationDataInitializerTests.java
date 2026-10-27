@@ -23,9 +23,16 @@ class DemoAccommodationDataInitializerTests {
     void createsFortyAccommodationsWithPhotosAndAtLeastTwentyPhysicalRoomsEachWithoutDuplicates() {
         assertDemoCounts();
 
+        Integer originalId = jdbc.queryForObject(
+            "select accommodation_id from accommodations where name = '강남 시티 스테이'", Integer.class);
+        jdbc.update("update accommodations set name = '[샘플] 강남 시티 스테이' where accommodation_id = ?",
+            originalId);
         initializer.run(null);
 
         assertDemoCounts();
+        assertThat(jdbc.queryForObject(
+            "select accommodation_id from accommodations where name = '강남 시티 스테이'", Integer.class))
+            .isEqualTo(originalId);
     }
 
     private void assertDemoCounts() {
