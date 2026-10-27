@@ -64,7 +64,8 @@ public class PaymentController {
 
     @GetMapping("/capabilities")
     public PaymentCapabilities capabilities() {
-        return new PaymentCapabilities(demoEnabled, tossGateway.isConfigured(), tossGateway.clientKey());
+        return new PaymentCapabilities(demoEnabled, tossGateway.isConfigured(), tossGateway.clientKey(),
+            tossGateway.mode(), tossGateway.billingEnabled());
     }
 
     @GetMapping("/me")
@@ -112,7 +113,10 @@ public class PaymentController {
         }
     }
 
-    public record PaymentCapabilities(boolean demoEnabled, boolean tossEnabled, String tossClientKey) { }
+    // tossMode: WIDGET(결제위젯) 또는 PAYMENT_WINDOW(결제창). 토스 결제가 꺼져 있으면 null
+    // billingEnabled: 카드 등록(자동결제)을 쓸 수 있는지 (API 개별 연동 키일 때만)
+    public record PaymentCapabilities(boolean demoEnabled, boolean tossEnabled, String tossClientKey,
+                                      String tossMode, boolean billingEnabled) { }
 
     public record DemoCompleteRequest(@NotNull @Positive Long bookingId) { }
 

@@ -309,6 +309,7 @@
   var tossNote = document.getElementById('toss-payment-note');
   var tossMethod = document.getElementById('toss-payment-method');
   var tossAgreement = document.getElementById('toss-payment-agreement');
+  var tossCapabilities = null;
   var tossWidgets = null;
   var tossWidgetsReady = null;
   var tossAmountUpdate = Promise.resolve();
@@ -818,7 +819,10 @@
           throw new Error('선택한 날짜에 남은 객실이 없습니다.');
         }
         if (quote.payAmount > 0) {
-          await ensureTossWidgets(quote.payAmount);
+          var capabilities = await getTossCapabilities();
+          if (capabilities.tossMode !== 'PAYMENT_WINDOW') {
+            await ensureTossWidgets(quote.payAmount);
+          }
         }
 
         var booking =
@@ -843,6 +847,12 @@
         if (booking.totalAmount - booking.usedMileage === 0) {
           await BookingApi.completeFreePayment(booking.bookingId);
           window.location.replace('/booking/my.html?created=' +
+            encodeURIComponent(booking.bookingId));
+          return;
+        }
+
+        if (capabilities.tossMode === 'PAYMENT_WINDOW') {
+          window.location.replace('/payment/checkout.html?bookingId=' +
             encodeURIComponent(booking.bookingId));
           return;
         }
@@ -999,13 +1009,21 @@
    */
   var quoteSeq = 0;
 
+  async function getTossCapabilities() {
+    if (!tossCapabilities) {
+      var capabilities = await BookingApi.getPaymentCapabilities();
+      if (!capabilities.tossEnabled || !capabilities.tossClientKey) {
+        throw new Error('토스 테스트 결제가 설정되지 않았습니다. 결제 키를 확인해 주세요.');
+      }
+      tossCapabilities = capabilities;
+    }
+    return tossCapabilities;
+  }
+
   async function ensureTossWidgets(amount) {
     if (!tossWidgetsReady) {
       tossWidgetsReady = (async function () {
-        var capabilities = await BookingApi.getPaymentCapabilities();
-        if (!capabilities.tossEnabled || !capabilities.tossClientKey) {
-          throw new Error('토스 테스트 결제가 설정되지 않았습니다. 결제 키를 확인해 주세요.');
-        }
+        var capabilities = await getTossCapabilities();
         if (typeof TossPayments !== 'function') {
           throw new Error('토스 결제 화면을 불러오지 못했습니다.');
         }
@@ -1084,13 +1102,21 @@
         '원';
 
       if (quote.payAmount > 0) {
-        tossMethod.hidden = false;
-        tossAgreement.hidden = false;
         tossNote.hidden = false;
         tossNote.textContent = '결제수단을 불러오는 중입니다.';
         try {
-          await ensureTossWidgets(quote.payAmount);
-          if (seq === quoteSeq) tossNote.hidden = true;
+          var capabilities = await getTossCapabilities();
+          if (seq !== quoteSeq) return;
+          if (capabilities.tossMode === 'PAYMENT_WINDOW') {
+            tossMethod.hidden = true;
+            tossAgreement.hidden = true;
+            tossNote.textContent = '예약 요청 후 결제창에서 결제수단을 선택합니다.';
+          } else {
+            tossMethod.hidden = false;
+            tossAgreement.hidden = false;
+            await ensureTossWidgets(quote.payAmount);
+            if (seq === quoteSeq) tossNote.hidden = true;
+          }
         } catch (paymentError) {
           if (seq === quoteSeq) tossNote.textContent = paymentError.message;
         }

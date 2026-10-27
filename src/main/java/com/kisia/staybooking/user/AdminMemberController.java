@@ -118,11 +118,13 @@ public class AdminMemberController {
                                        @NotBlank @Size(max = 255) String description) { }
     public record StatusRequest(@NotNull UserStatus status) { }
     public record RoleRequest(@NotNull UserRole role) { }
+    // 관리자 전용 응답이라 회원 연락처(phone)를 그대로 준다. 일반 사용자 응답에는 넣지 않는다.
     public record MemberSummary(Long userId, String loginId, String name, String nickname,
-                                String email, UserRole role, UserStatus status, long mileageBalance) {
+                                String email, String phone, UserRole role, UserStatus status,
+                                long mileageBalance) {
         static MemberSummary from(UserEntity user) {
             return new MemberSummary(user.getUserId(), user.getLoginId(), user.getName(),
-                user.getNickname(), user.getEmail(), user.getRole(), user.getStatus(),
+                user.getNickname(), user.getEmail(), user.getPhone(), user.getRole(), user.getStatus(),
                 user.getMileageBalance());
         }
     }
