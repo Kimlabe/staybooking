@@ -30,7 +30,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES
   ON staybooking.* TO 'staybooking_app'@'192.168.30.20';
 ```
 
-초기 개발 중에는 Hibernate가 누락된 테이블을 만들 수 있도록 `ddl-auto=update`를 사용합니다. 테이블과 FK를 검토해 확정하면 `STAYBOOKING_DDL_AUTO=validate`로 바꿉니다. 기존 컬럼 삭제나 데이터 이관은 `update`가 대신 처리하지 않으므로, 변경 시 SQL과 백업 계획을 별도로 검토합니다.
+MySQL 프로필은 기본적으로 `ddl-auto=validate`를 사용합니다. 엔티티를 바꾼 경우 백업 후 해당 수동 SQL을 적용하고, `validate`로 새 WAR를 먼저 검증합니다. 기존 컬럼 삭제나 데이터 이관을 Hibernate의 `update`에 맡기지 않습니다.
 
 ### 자동 환불 스키마 변경 준비
 
@@ -51,13 +51,23 @@ SPRING_PROFILES_ACTIVE=mysql
 STAYBOOKING_DB_URL=jdbc:mysql://192.168.30.30:3306/staybooking
 STAYBOOKING_DB_USER=staybooking_app
 STAYBOOKING_DB_PASSWORD=<DB01에서 정한 비밀번호>
-STAYBOOKING_DDL_AUTO=update
+STAYBOOKING_DDL_AUTO=validate
 ```
 
 Tomcat 서비스에 WAR를 배포할 때는 **Tomcat systemd 서비스의 환경변수**로 주입해야 합니다. Mac IDE에만 입력하면 WAS01 프로세스에는 전달되지 않습니다. 설정 후 WAS01에서 애플리케이션 로그의 DB 연결 성공 여부와 DB01의 `SHOW TABLES FROM staybooking;` 결과를 함께 확인합니다. `users`, `accommodations`, `rooms`, `bookings`, `payments`, `booking_cancellation_requests`가 생성 대상입니다.
+
+외부 Tomcat은 `SPRING_PROFILES_ACTIVE=mysql`을 명시해야 합니다. 빠뜨리거나 `local`을 함께 활성화하면 WAR가 시작 단계에서 중단됩니다. 이는 공유 서버가 휘발성 H2 데이터베이스로 잘못 뜨는 상황을 막기 위한 검사입니다. Mac에서 `bootRun` 또는 실행형 WAR로 로컬 화면을 확인하는 흐름에는 영향을 주지 않습니다.
 
 2026-10-26 최신 `ROOT.war`를 WAS01에 배포했습니다. 이전 배포본은 `/opt/tomcat11/backups/staybooking-20261026T115805Z`에 보관했습니다. 재기동 로그에서 JPA Repository 15개가 로드됐고, `/` 및 `/api/v1/accommodations`는 HTTP 200으로 확인했습니다. 배포 직후의 `curl` 연결 실패 메시지는 Tomcat 시작 중 재시도에서 발생했으며, 최종 스크립트 결과는 `Deployment healthy`였습니다. 관리자 호스트·고정 JWT 키·토스 키는 이 배포에서 설정하지 않았습니다.
 
 이후 WAS01의 별도 Tomcat 설정으로 `STAYBOOKING_ADMIN_HOST=admin.localhost`, `STAYBOOKING_DDL_AUTO=validate`, 재시작해도 유지되는 JWT 키를 적용했습니다. JWT 키 값은 저장소와 이 문서에 기록하지 않습니다. 재기동 후 공개 홈·숙소 API·관리자 숙소 화면·승인자 화면·관리자 JS가 HTTP 200, 일반 호스트의 관리자 API가 404, 관리자 호스트에서 로그인하지 않은 관리자 API가 401인 것을 확인했습니다. 토스 테스트 키는 아직 WAS01에 설정하지 않았습니다.
 
 로컬 자동 테스트는 별도 H2 설정을 사용합니다. 위 접속 값 없이도 `./gradlew test`가 실행됩니다.
+
+## 다음 WAR 배포 전 확인
+
+카드 등록 기능 추가로 `billing_customers`와 `billing_cards` 테이블이 필요합니다. 현재 DB01의 테이블 존재 여부는 SSH 연결이 끊겨 확인하지 못했습니다. 두 테이블이 없다면 DB 백업과 현재 스키마 확인 후 [카드 등록 테이블 SQL](../sql/2026-10-28-billing-tables.sql)을 한 번 적용합니다. 이미 있다면 SQL을 다시 실행하지 않고 컬럼·제약조건을 비교합니다.
+
+카드 등록을 사용할 때는 Tomcat 서비스에 `STAYBOOKING_BILLING_ENCRYPTION_KEY`를 Base64로 인코딩한 32바이트 키로 설정해야 합니다. 키를 설정하지 않으면 재시작 후 기존 등록 카드를 복호화할 수 없습니다. `STAYBOOKING_TOSS_CLIENT_KEY`와 `STAYBOOKING_TOSS_SECRET_KEY`도 같은 상점의 테스트 키 한 쌍으로 Tomcat 서비스에 설정합니다. Mac IDEA의 환경변수는 WAS01에 전달되지 않습니다.
+
+새 WAR 배포 전 DB01의 MySQL 접속, WAS01의 DB 접속, 스키마 `validate` 기동, 관리자 호스트, 공개 숙소 API, 결제 설정 응답을 차례로 확인합니다. DB·업로드 폴더와 기존 `ROOT.war`를 별도로 백업한 뒤 교체합니다. 검증 실패 시 이전 WAR로 되돌리고 DB 상태를 확인합니다.
