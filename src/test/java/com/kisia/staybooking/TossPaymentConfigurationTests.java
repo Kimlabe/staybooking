@@ -2,6 +2,7 @@ package com.kisia.staybooking;
 
 import com.kisia.staybooking.common.ApiException;
 import com.kisia.staybooking.payment.PaymentController;
+import com.kisia.staybooking.payment.BillingKeyCipher;
 import com.kisia.staybooking.payment.PaymentService;
 import com.kisia.staybooking.payment.PaymentHistoryService;
 import com.kisia.staybooking.payment.TossPaymentConfirmationService;
@@ -19,7 +20,8 @@ class TossPaymentConfigurationTests {
     void onlyMatchingWidgetTestKeysEnableTossAndDisableDemoBypass() {
         TossPaymentGateway gateway = new TossPaymentGateway("test_gck_example", "test_gsk_example");
         PaymentController controller = new PaymentController(mock(PaymentService.class),
-            mock(TossPaymentConfirmationService.class), gateway, mock(PaymentHistoryService.class), true);
+            mock(TossPaymentConfirmationService.class), gateway, new BillingKeyCipher(""),
+            mock(PaymentHistoryService.class), true);
 
         assertTrue(controller.capabilities().tossEnabled());
         assertFalse(controller.capabilities().demoEnabled());

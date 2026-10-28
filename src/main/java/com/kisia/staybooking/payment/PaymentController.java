@@ -27,15 +27,17 @@ public class PaymentController {
     private final PaymentService payments;
     private final TossPaymentConfirmationService tossConfirmations;
     private final TossPaymentGateway tossGateway;
+    private final BillingKeyCipher billingCipher;
     private final PaymentHistoryService history;
     private final boolean demoEnabled;
 
     public PaymentController(PaymentService payments, TossPaymentConfirmationService tossConfirmations,
-                             TossPaymentGateway tossGateway, PaymentHistoryService history,
+                             TossPaymentGateway tossGateway, BillingKeyCipher billingCipher, PaymentHistoryService history,
                              @Value("${staybooking.payment.demo-enabled:false}") boolean demoEnabled) {
         this.payments = payments;
         this.tossConfirmations = tossConfirmations;
         this.tossGateway = tossGateway;
+        this.billingCipher = billingCipher;
         this.history = history;
         this.demoEnabled = demoEnabled && !tossGateway.isConfigured();
     }
@@ -65,7 +67,7 @@ public class PaymentController {
     @GetMapping("/capabilities")
     public PaymentCapabilities capabilities() {
         return new PaymentCapabilities(demoEnabled, tossGateway.isConfigured(), tossGateway.clientKey(),
-            tossGateway.mode(), tossGateway.billingEnabled());
+            tossGateway.mode(), tossGateway.billingEnabled() && billingCipher.isPersistent());
     }
 
     @GetMapping("/me")
@@ -114,7 +116,7 @@ public class PaymentController {
     }
 
     // tossMode: WIDGET(결제위젯) 또는 PAYMENT_WINDOW(결제창). 토스 결제가 꺼져 있으면 null
-    // billingEnabled: 카드 등록(자동결제)을 쓸 수 있는지 (API 개별 연동 키일 때만)
+    // billingEnabled: API 개별 연동 키와 재시작 후에도 유지되는 암호화 키가 모두 있을 때만 true
     public record PaymentCapabilities(boolean demoEnabled, boolean tossEnabled, String tossClientKey,
                                       String tossMode, boolean billingEnabled) { }
 

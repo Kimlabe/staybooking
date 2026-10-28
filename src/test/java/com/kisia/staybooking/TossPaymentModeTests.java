@@ -1,6 +1,7 @@
 package com.kisia.staybooking;
 
 import com.kisia.staybooking.payment.PaymentController;
+import com.kisia.staybooking.payment.BillingKeyCipher;
 import com.kisia.staybooking.payment.PaymentHistoryService;
 import com.kisia.staybooking.payment.PaymentService;
 import com.kisia.staybooking.payment.TossPaymentConfirmationService;
@@ -23,6 +24,18 @@ class TossPaymentModeTests {
         assertEquals("PAYMENT_WINDOW", capabilities.tossMode());
         assertEquals("test_ck_example", capabilities.tossClientKey());
         assertFalse(capabilities.demoEnabled());
+        assertFalse(capabilities.billingEnabled());
+    }
+
+    @Test
+    void persistentEncryptionKeyEnablesSavedCardBillingWithIndividualKeys() {
+        PaymentController controller = new PaymentController(mock(PaymentService.class),
+            mock(TossPaymentConfirmationService.class),
+            new TossPaymentGateway("test_ck_example", "test_sk_example"),
+            new BillingKeyCipher("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="),
+            mock(PaymentHistoryService.class), false);
+
+        assertTrue(controller.capabilities().billingEnabled());
     }
 
     @Test
@@ -47,6 +60,7 @@ class TossPaymentModeTests {
 
     private static PaymentController.PaymentCapabilities capabilities(String clientKey, String secretKey) {
         return new PaymentController(mock(PaymentService.class), mock(TossPaymentConfirmationService.class),
-            new TossPaymentGateway(clientKey, secretKey), mock(PaymentHistoryService.class), true).capabilities();
+            new TossPaymentGateway(clientKey, secretKey), new BillingKeyCipher(""),
+            mock(PaymentHistoryService.class), true).capabilities();
     }
 }

@@ -124,7 +124,7 @@ public class BillingService {
     }
 
     private void requireBilling() {
-        if (!gateway.billingEnabled()) {
+        if (!gateway.billingEnabled() || !cipher.isPersistent()) {
             throw new ApiException(HttpStatus.SERVICE_UNAVAILABLE, "BILLING_NOT_CONFIGURED",
                 "카드 등록 결제를 사용할 수 없습니다.");
         }
