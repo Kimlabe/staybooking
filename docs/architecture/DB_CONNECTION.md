@@ -70,4 +70,6 @@ Tomcat 서비스에 WAR를 배포할 때는 **Tomcat systemd 서비스의 환경
 
 카드 등록을 사용할 때는 Tomcat 서비스에 `STAYBOOKING_BILLING_ENCRYPTION_KEY`를 Base64로 인코딩한 32바이트 키로 설정해야 합니다. 키를 설정하지 않으면 재시작 후 기존 등록 카드를 복호화할 수 없습니다. `STAYBOOKING_TOSS_CLIENT_KEY`와 `STAYBOOKING_TOSS_SECRET_KEY`도 같은 상점의 테스트 키 한 쌍으로 Tomcat 서비스에 설정합니다. Mac IDEA의 환경변수는 WAS01에 전달되지 않습니다.
 
+업로드 사진을 유지하려면 `STAYBOOKING_UPLOAD_DIR`을 Tomcat 계정이 쓰기 가능한 영구 디스크 경로로 설정하고 DB와 함께 백업합니다. 기본 임시 폴더는 재부팅·정리 작업 후 파일이 사라질 수 있습니다. 브라우저가 HTTPS로 접속하는 배포 주소를 정하고 `STAYBOOKING_COOKIE_SECURE=true`를 유지해야 Refresh Token 쿠키가 정상 동작합니다. `admin.localhost`는 개발용 주소이므로 팀원이 원격에서 관리자 화면을 써야 한다면 실제 접속 가능한 별도 호스트명과 프록시의 `Host` 전달 설정을 확인합니다.
+
 새 WAR 배포 전 DB01의 MySQL 접속, WAS01의 DB 접속, 스키마 `validate` 기동, 관리자 호스트, 공개 숙소 API, 결제 설정 응답을 차례로 확인합니다. DB·업로드 폴더와 기존 `ROOT.war`를 별도로 백업한 뒤 교체합니다. 검증 실패 시 이전 WAR로 되돌리고 DB 상태를 확인합니다.
