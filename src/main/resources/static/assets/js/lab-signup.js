@@ -44,11 +44,16 @@
       });
       var body = await response.json();
       if (!response.ok) throw new Error(body.message || '실습 요청에 실패했습니다.');
-      var count = Number(body[0] || 0);
-      status.textContent = count ? '실습 쿼리: 사용 중으로 판정' : '실습 쿼리: 사용 가능으로 판정';
-      status.className = 'field-status ' + (count ? '' : 'ok');
+      status.textContent = body.unsafeCount ? '실습 쿼리: 사용 중으로 판정' : '실습 쿼리: 사용 가능으로 판정';
+      status.className = 'field-status ' + (body.unsafeCount ? '' : 'ok');
       status.hidden = false;
-      result.textContent = '조회 건수: ' + count + '\n이 결과는 실습용 SQL 쿼리에서 나왔습니다. 계정은 생성되지 않습니다.';
+      Ui.showAlert(alertBox, body.injectionSucceeded
+        ? 'SQL 인젝션 성공: 안전한 조회와 취약한 조회의 중복 확인 결과가 다릅니다.'
+        : 'SQL 인젝션 성공이 확인되지 않았습니다. 계정은 생성되지 않습니다.',
+        body.injectionSucceeded ? 'success' : 'warning');
+      result.textContent = '안전한 조회: ' + body.safeCount + '건'
+        + '\n취약한 조회: ' + body.unsafeCount + '건'
+        + '\n계정은 생성되지 않습니다.';
       result.hidden = false;
     } catch (error) {
       Ui.showAlert(alertBox, error.message || '실습 요청에 실패했습니다.', 'error');
@@ -61,6 +66,5 @@
   form.addEventListener('submit', function (event) {
     event.preventDefault();
     checkEmail();
-    if (enabled) Ui.showAlert(alertBox, '실습 환경에서는 실제 회원가입을 진행하지 않습니다.', 'warning');
   });
 })();

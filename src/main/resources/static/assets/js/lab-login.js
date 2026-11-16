@@ -44,10 +44,13 @@
       });
       var body = await response.json();
       if (!response.ok) throw new Error(body.message || '실습 요청에 실패했습니다.');
-      Ui.showAlert(alertBox,
-        '실습 쿼리 결과: ' + body.length + '건 조회. 실제 로그인과 토큰 발급은 수행하지 않았습니다.',
-        body.length ? 'warning' : 'error');
-      result.textContent = body.length ? body.join('\n') : '(조회 결과 없음)';
+      Ui.showAlert(alertBox, body.injectionSucceeded
+        ? 'SQL 인젝션 성공: 안전한 조회는 불일치하지만 취약한 조회는 계정을 찾았습니다. 실제 로그인과 토큰 발급은 수행하지 않았습니다.'
+        : 'SQL 인젝션 성공이 확인되지 않았습니다. 실제 로그인과 토큰 발급은 수행하지 않았습니다.',
+        body.injectionSucceeded ? 'success' : 'warning');
+      result.textContent = '안전한 조회: ' + (body.safeMatched ? '일치' : '불일치')
+        + '\n취약한 조회: ' + (body.unsafeMatched ? '일치' : '불일치')
+        + '\n조회된 계정: ' + (body.matchedRows.length ? body.matchedRows.join(', ') : '(없음)');
       result.hidden = false;
     } catch (error) {
       Ui.showAlert(alertBox, error.message || '실습 요청에 실패했습니다.', 'error');

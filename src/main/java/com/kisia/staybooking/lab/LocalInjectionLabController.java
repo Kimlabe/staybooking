@@ -50,8 +50,8 @@ public class LocalInjectionLabController {
     }
 
     @PostMapping("/login")
-    public List<String> login(@RequestBody LoginLabRequest body,
-                              HttpServletRequest request) {
+    public InjectionLabQueryService.LoginProof login(@RequestBody LoginLabRequest body,
+                                                     HttpServletRequest request) {
         requireLoopback(request);
         return query.loginDemo(body.loginId(), body.password());
     }
@@ -59,7 +59,8 @@ public class LocalInjectionLabController {
     public record LoginLabRequest(String loginId, String password) {}
 
     @PostMapping("/signup-check")
-    public List<String> signupCheck(@RequestBody SignupLabRequest body, HttpServletRequest request) {
+    public InjectionLabQueryService.SignupProof signupCheck(@RequestBody SignupLabRequest body,
+                                                            HttpServletRequest request) {
         requireLoopback(request);
         return query.signupAvailabilityDemo(body.loginId());
     }

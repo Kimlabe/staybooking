@@ -1,5 +1,6 @@
 package com.kisia.staybooking.lab;
 
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -52,22 +53,61 @@ public class InjectionLabQueryService {
      * Vulnerable login check: reproduces authentication-bypass injection (e.g. {@code ' OR '1'='1' -- }).
      * Returns the matched "login_id (role)" rows so a successful bypass is visible in the exercise.
      */
-    public List<String> loginDemo(String loginId, String password) {
+    public LoginProof loginDemo(String loginId, String password) {
         guardLength(loginId);
         guardLength(password);
+        boolean safeMatched = safeLoginMatch(loginId, password);
         String sql = "SELECT login_id, role FROM users WHERE login_id = '" + loginId
             + "' AND password_hash = '" + password + "'";
-        return runQuery(sql, "로그인 실습 쿼리를 처리하지 못했습니다.", 2);
+        List<String> unsafeRows = runQuery(sql, "로그인 실습 쿼리를 처리하지 못했습니다.", 2);
+        return new LoginProof(safeMatched, !unsafeRows.isEmpty(),
+            !safeMatched && !unsafeRows.isEmpty(), unsafeRows);
     }
+
+    public record LoginProof(boolean safeMatched, boolean unsafeMatched,
+                             boolean injectionSucceeded, List<String> matchedRows) {}
 
     /**
      * Vulnerable signup "id availability" check: reproduces boolean/blind injection on a field that
      * normally just reports whether a login id is already taken.
      */
-    public List<String> signupAvailabilityDemo(String loginId) {
+    public SignupProof signupAvailabilityDemo(String loginId) {
         guardLength(loginId);
+        long safeCount = safeSignupCount(loginId);
         String sql = "SELECT COUNT(*) FROM users WHERE login_id = '" + loginId + "'";
-        return runQuery(sql, "회원가입 중복확인 실습 쿼리를 처리하지 못했습니다.");
+        long unsafeCount = Long.parseLong(runQuery(sql,
+            "회원가입 중복확인 실습 쿼리를 처리하지 못했습니다.").getFirst());
+        return new SignupProof(safeCount, unsafeCount, safeCount != unsafeCount);
+    }
+
+    public record SignupProof(long safeCount, long unsafeCount, boolean injectionSucceeded) {}
+
+    private boolean safeLoginMatch(String loginId, String password) {
+        try (var connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement(
+                 "SELECT 1 FROM users WHERE login_id = ? AND password_hash = ?")) {
+            statement.setString(1, loginId);
+            statement.setString(2, password);
+            try (var rows = statement.executeQuery()) {
+                return rows.next();
+            }
+        } catch (SQLException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "로그인 비교 쿼리를 처리하지 못했습니다.");
+        }
+    }
+
+    private long safeSignupCount(String loginId) {
+        try (var connection = dataSource.getConnection();
+             PreparedStatement statement = connection.prepareStatement(
+                 "SELECT COUNT(*) FROM users WHERE login_id = ?")) {
+            statement.setString(1, loginId);
+            try (var rows = statement.executeQuery()) {
+                rows.next();
+                return rows.getLong(1);
+            }
+        } catch (SQLException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "중복확인 비교 쿼리를 처리하지 못했습니다.");
+        }
     }
 
     private void guardLength(String value) {

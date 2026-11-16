@@ -9,6 +9,17 @@
   function show(el, data) {
     if (Array.isArray(data)) {
       el.textContent = data.length ? data.join('\n') : '(결과 없음)';
+    } else if (data && typeof data === 'object' && 'injectionSucceeded' in data) {
+      var lines = [data.injectionSucceeded ? 'SQL 인젝션 성공' : 'SQL 인젝션 성공 확인 안 됨'];
+      if ('matchedRows' in data) {
+        lines.push('안전한 조회: ' + (data.safeMatched ? '일치' : '불일치'));
+        lines.push('취약한 조회: ' + (data.unsafeMatched ? '일치' : '불일치'));
+        lines.push('조회된 계정: ' + (data.matchedRows.length ? data.matchedRows.join(', ') : '(없음)'));
+      } else {
+        lines.push('안전한 중복 확인: ' + data.safeCount + '건');
+        lines.push('취약한 중복 확인: ' + data.unsafeCount + '건');
+      }
+      el.textContent = lines.join('\n');
     } else {
       el.textContent = String(data);
     }

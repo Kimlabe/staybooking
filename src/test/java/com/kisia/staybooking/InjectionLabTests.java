@@ -105,7 +105,15 @@ class InjectionLabTests {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"loginId\":\"" + accountId + "' -- \",\"password\":\"irrelevant\"}"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasItem(org.hamcrest.Matchers.startsWith(accountId))));
+            .andExpect(jsonPath("$.safeMatched").value(false))
+            .andExpect(jsonPath("$.unsafeMatched").value(true))
+            .andExpect(jsonPath("$.injectionSucceeded").value(true))
+            .andExpect(jsonPath("$.matchedRows", hasItem(org.hamcrest.Matchers.startsWith(accountId))));
+        mvc.perform(post("/api/v1/lab/injection/login").with(localHost())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"loginId\":\"" + accountId + "\",\"password\":\"irrelevant\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.injectionSucceeded").value(false));
     }
 
     @Test
@@ -114,12 +122,23 @@ class InjectionLabTests {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"loginId\":\"nope' OR '1'='2\"}"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[0]").value("0"));
+            .andExpect(jsonPath("$.safeCount").value(0))
+            .andExpect(jsonPath("$.unsafeCount").value(0))
+            .andExpect(jsonPath("$.injectionSucceeded").value(false));
         mvc.perform(post("/api/v1/lab/injection/signup-check").with(localHost())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"loginId\":\"nope' OR '1'='1\"}"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$[0]", org.hamcrest.Matchers.not("0")));
+            .andExpect(jsonPath("$.safeCount").value(0))
+            .andExpect(jsonPath("$.unsafeCount", org.hamcrest.Matchers.greaterThan(0)))
+            .andExpect(jsonPath("$.injectionSucceeded").value(true));
+        mvc.perform(post("/api/v1/lab/injection/signup-check").with(localHost())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"loginId\":\"" + accountId + "\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.safeCount").value(1))
+            .andExpect(jsonPath("$.unsafeCount").value(1))
+            .andExpect(jsonPath("$.injectionSucceeded").value(false));
     }
 
     @Test
