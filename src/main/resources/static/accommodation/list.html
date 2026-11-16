@@ -78,6 +78,14 @@
         </button>
 
       </form>
+
+      <div id="sql-lab-controls" class="sql-lab-controls" hidden>
+        <label for="sql-lab-mode">
+          <input id="sql-lab-mode" type="checkbox">
+          로컬 SQL 인젝션 실습 검색
+        </label>
+        <p>체크하면 위 숙소 검색어를 로컬 실습 쿼리에 전달합니다. 날짜와 인원 조건은 적용되지 않습니다.</p>
+      </div>
     </section>
 
     <!-- 조회 상태/오류 -->
@@ -94,6 +102,7 @@
         <h2>숙소 목록</h2>
         <span id="result-count"></span>
       </div>
+      <p id="sql-lab-result-note" class="sql-lab-result-note" role="status" hidden></p>
 
       <!-- JS에서 숙소 카드 생성 -->
       <div

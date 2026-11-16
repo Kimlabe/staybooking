@@ -34,6 +34,16 @@
   var emptyMessage = document.getElementById('empty-message');
   var resultCount = document.getElementById('result-count');
   var searchButton = document.getElementById('search-button');
+  var labControls = document.getElementById('sql-lab-controls');
+  var labMode = document.getElementById('sql-lab-mode');
+  var labResultNote = document.getElementById('sql-lab-result-note');
+
+  // The server exposes this route only in the local H2 lab and only to loopback clients.
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    fetch('/api/v1/accommodations/lab-status', { cache: 'no-store' })
+      .then(function (response) { if (response.ok) labControls.hidden = false; })
+      .catch(function () { /* Lab is unavailable: keep the controls hidden. */ });
+  }
 
   /*
    * 현재 백엔드의 숙소 Controller가 아직 완성되지 않았을 수 있으므로
@@ -299,6 +309,20 @@ function initializeFromQuery() {
 
     try {
 
+      if (labMode.checked && !labControls.hidden) {
+        var labParams = new URLSearchParams({ keyword: keyword.value.trim() });
+        var labResponse = await fetch('/api/v1/accommodations/lab-search?' + labParams.toString(), {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          cache: 'no-store'
+        });
+        if (!labResponse.ok) throw new Error('로컬 SQL 실습 검색에 실패했습니다.');
+        renderLabNames(await labResponse.json());
+        return;
+      }
+
+      labResultNote.hidden = true;
+
       var params = new URLSearchParams();
 
       if (keyword.value.trim()) {
@@ -385,6 +409,25 @@ function initializeFromQuery() {
         false
       );
     }
+  }
+
+  function renderLabNames(names) {
+    list.textContent = '';
+    resultCount.textContent = names.length + '개';
+    emptyMessage.hidden = names.length !== 0;
+    labResultNote.textContent = '로컬 실습 쿼리 결과입니다. 일반 숙소 검색 API의 결과와 구분하세요.';
+    labResultNote.hidden = false;
+    names.forEach(function (value) {
+      var card = document.createElement('article');
+      card.className = 'accommodation-card';
+      var content = document.createElement('div');
+      content.className = 'accommodation-card-content';
+      var name = document.createElement('h3');
+      name.textContent = value;
+      content.append(name);
+      card.append(content);
+      list.append(card);
+    });
   }
 
   /*

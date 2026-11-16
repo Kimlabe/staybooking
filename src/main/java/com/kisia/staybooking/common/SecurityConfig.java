@@ -29,14 +29,24 @@ public class SecurityConfig {
     // 쿠키를 쓰는 reissue·logout은 Refresh Token 쿠키의 SameSite=Strict로 다른 사이트 요청(CSRF)을 막는다.
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtTokenProvider jwt,
-                                                   UserRepository users) throws Exception {
+                                                   UserRepository users,
+                                                   @org.springframework.beans.factory.annotation.Value(
+                                                       "${staybooking.security.injection-lab-enabled:false}")
+                                                   boolean injectionLabEnabled) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)
             .formLogin(AbstractHttpConfigurer::disable)
             .logout(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
+            .authorizeHttpRequests(auth -> {
+                // 진단 실습 랩: injection-lab-enabled=true(로컬 전용)일 때만 규칙이 추가되어 공개된다.
+                // 운영에서는 이 규칙 자체가 없고, 컨트롤러도 loopback 요청만 처리하므로 로컬 외부에서는 404가 된다.
+                if (injectionLabEnabled) {
+                    auth.requestMatchers(HttpMethod.GET, "/api/v1/lab/injection/**").permitAll();
+                    auth.requestMatchers(HttpMethod.POST, "/api/v1/lab/injection/login").permitAll();
+                }
+                auth
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/signup", "/api/v1/auth/login",
                     "/api/v1/auth/reissue", "/api/v1/auth/logout", "/api/v1/auth/find-email").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/auth/check-email").permitAll()
@@ -51,7 +61,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/approver/**").hasAnyRole("APPROVER", "ADMIN")
                 .requestMatchers("/api/**").authenticated()
                 // 화면(static의 html·js·css)은 누구나 받을 수 있고, 로그인 확인은 각 화면이 API로 한다.
-                .anyRequest().permitAll())
+                .anyRequest().permitAll();
+            })
             .exceptionHandling(handling -> handling
                 .authenticationEntryPoint((request, response, e) -> writeError(response,
                     HttpServletResponse.SC_UNAUTHORIZED, "UNAUTHORIZED", "로그인이 필요합니다."))

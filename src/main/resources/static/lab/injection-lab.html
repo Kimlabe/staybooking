@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="same-origin">
+  <meta name="robots" content="noindex,nofollow">
+  <title>[실습 환경] SQL 인젝션 진단 랩 | 스테이북</title>
+  <link rel="stylesheet" href="/assets/css/style.css">
+</head>
+
+<body>
+  <header class="site-header">
+    <a class="logo" href="/">스테이북</a>
+  </header>
+
+  <main class="accommodation-page">
+    <section class="lab-banner" role="alert">
+      <h1>⚠️ SQL 인젝션 진단 실습 환경 (LAB)</h1>
+      <p>
+        이 페이지는 <strong>진단 교육용으로 일부러 취약하게 만든 격리 실습 환경</strong>입니다.
+        로컬 인메모리 H2 스키마에서만, localhost(loopback) 요청에 한해 동작합니다.
+        운영 서비스의 실제 검색·로그인·회원가입 API는 파라미터 바인딩을 사용하며 이 실습의 영향을 받지 않습니다.
+      </p>
+      <p class="lab-banner-note">
+        보고서에 기재할 때는 반드시 <strong>“의도적으로 심은 실습용 취약점”</strong>으로 명시하세요.
+      </p>
+    </section>
+
+    <!-- 1) 숙소 검색 인젝션 -->
+    <section class="search-box">
+      <h2>1. 숙소 검색 인젝션</h2>
+      <p>예: <code>' OR 1=1 -- </code> / UNION: <code>' UNION SELECT login_id FROM users -- </code></p>
+      <div class="search-field">
+        <label for="search-keyword">검색어</label>
+        <input id="search-keyword" type="text" autocomplete="off">
+      </div>
+      <button id="search-run" type="button">실습 실행</button>
+      <pre id="search-result" class="lab-result" aria-live="polite"></pre>
+    </section>
+
+    <!-- 2) 로그인 우회 인젝션 -->
+    <section class="search-box">
+      <h2>2. 로그인 인증 우회 인젝션</h2>
+      <p>예: 아이디 <code>admin@staybooking.local' -- </code> 또는 <code>' OR '1'='1' -- </code>. 이 실습은 실제 로그인 토큰을 발급하지 않습니다.</p>
+      <div class="search-field">
+        <label for="login-id">아이디</label>
+        <input id="login-id" type="text" autocomplete="off">
+      </div>
+      <div class="search-field">
+        <label for="login-pw">비밀번호</label>
+        <input id="login-pw" type="password" autocomplete="off">
+      </div>
+      <button id="login-run" type="button">실습 실행</button>
+      <pre id="login-result" class="lab-result" aria-live="polite"></pre>
+    </section>
+
+    <!-- 3) 회원가입 중복확인 인젝션 -->
+    <section class="search-box">
+      <h2>3. 회원가입 아이디 중복확인 인젝션 (불리언/블라인드)</h2>
+      <p>예: <code>x' OR '1'='1</code> (참) vs <code>x' OR '1'='2</code> (거짓)</p>
+      <div class="search-field">
+        <label for="signup-id">아이디</label>
+        <input id="signup-id" type="text" autocomplete="off">
+      </div>
+      <button id="signup-run" type="button">실습 실행</button>
+      <pre id="signup-result" class="lab-result" aria-live="polite"></pre>
+    </section>
+  </main>
+
+  <script src="/assets/js/injection-lab.js"></script>
+</body>
+</html>
