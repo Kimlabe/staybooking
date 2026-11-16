@@ -62,7 +62,7 @@
     });
     document.getElementById('signup-run').addEventListener('click', function () {
       call('/signup-check', { loginId: document.getElementById('signup-id').value },
-        document.getElementById('signup-result'));
+        document.getElementById('signup-result'), 'POST');
     });
   }
 })();

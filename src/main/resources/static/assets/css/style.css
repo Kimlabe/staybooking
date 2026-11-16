@@ -2331,6 +2331,19 @@ a.review-edit-button:hover {
 .find-result li { padding: 4px 0; font-weight: 600; word-break: break-all; }
 
 /* SQL 인젝션 실습 랩 전용 스타일 (lab/injection-lab.html) */
+.lab-auth-banner {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 20px;
+  padding: 12px 14px;
+  border: 1px solid var(--warn);
+  border-radius: 8px;
+  background: var(--warn-bg);
+  color: #5c4a00;
+  font-size: 0.85rem;
+}
+.lab-auth-banner strong { font-size: 0.9rem; }
+.lab-auth-banner a { color: inherit; text-decoration: underline; }
 .lab-banner {
   margin: 18px 0;
   padding: 16px 18px;

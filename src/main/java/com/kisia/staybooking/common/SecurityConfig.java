@@ -45,6 +45,7 @@ public class SecurityConfig {
                 if (injectionLabEnabled) {
                     auth.requestMatchers(HttpMethod.GET, "/api/v1/lab/injection/**").permitAll();
                     auth.requestMatchers(HttpMethod.POST, "/api/v1/lab/injection/login").permitAll();
+                    auth.requestMatchers(HttpMethod.POST, "/api/v1/lab/injection/signup-check").permitAll();
                 }
                 auth
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/signup", "/api/v1/auth/login",

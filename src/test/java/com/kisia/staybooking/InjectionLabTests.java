@@ -110,12 +110,14 @@ class InjectionLabTests {
 
     @Test
     void signupCheckReproducesBooleanInjection() throws Exception {
-        mvc.perform(get("/api/v1/lab/injection/signup-check").with(localHost())
-                .param("loginId", "nope' OR '1'='2"))
+        mvc.perform(post("/api/v1/lab/injection/signup-check").with(localHost())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"loginId\":\"nope' OR '1'='2\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0]").value("0"));
-        mvc.perform(get("/api/v1/lab/injection/signup-check").with(localHost())
-                .param("loginId", "nope' OR '1'='1"))
+        mvc.perform(post("/api/v1/lab/injection/signup-check").with(localHost())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"loginId\":\"nope' OR '1'='1\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$[0]", org.hamcrest.Matchers.not("0")));
     }

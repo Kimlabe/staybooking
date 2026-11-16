@@ -58,11 +58,13 @@ public class LocalInjectionLabController {
 
     public record LoginLabRequest(String loginId, String password) {}
 
-    @GetMapping("/signup-check")
-    public List<String> signupCheck(@RequestParam String loginId, HttpServletRequest request) {
+    @PostMapping("/signup-check")
+    public List<String> signupCheck(@RequestBody SignupLabRequest body, HttpServletRequest request) {
         requireLoopback(request);
-        return query.signupAvailabilityDemo(loginId);
+        return query.signupAvailabilityDemo(body.loginId());
     }
+
+    public record SignupLabRequest(String loginId) {}
 
     private static void requireLoopback(HttpServletRequest request) {
         String host = request.getServerName();
